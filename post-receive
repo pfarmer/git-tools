@@ -1,0 +1,14 @@
+#!/bin/sh
+#
+# An example hook script that is called after a successful
+# commit is made.
+#
+# To enable this hook, make this file executable.
+
+ARGS=`cat`
+
+REF1=`echo $ARGS | awk '{print $1}'`
+REF2=`echo $ARGS | awk '{print $2}'`
+REF3=`echo $ARGS | awk '{print $3}'`
+
+git-log --pretty=medium -p ${REF1}..${REF2} | mail -s "Commit" pfarmer@hashbang.org.uk

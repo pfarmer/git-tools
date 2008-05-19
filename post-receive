@@ -28,8 +28,8 @@ function info {
 REF1=`echo $ARGS | awk '{print $1}'`
 REF2=`echo $ARGS | awk '{print $2}'`
 REF3=`echo $ARGS | awk '{print $3}'`
-PWD=`pwd`
-DEPOT=`basename ${PWD}`
+_PWD=`pwd`
+DEPOT=`basename ${_PWD}`
 
 # Check if commit/push is made to a branch we are interested in.
 if [ ! `echo $REF3 | grep -q info/notify` ]; then

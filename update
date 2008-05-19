@@ -85,6 +85,7 @@ if [ -f "$allowed_users_file" ]; then
   esac
 fi
 
+# Then based on group
 allowed_groups_file=$GIT_DIR/info/allowed-groups
 groups=$(id -G -n)
 info "The user belongs to the following groups:"
@@ -114,6 +115,37 @@ if [ -f "$allowed_groups_file" ]; then
     deny)  deny  >/dev/null "Denying  access based on $allowed_groups_file" ;;
     *) ;;
   esac
+fi
+
+# Who can create tags
+tagmatch=$(expr "$1" : "refs/tags")
+info "\$1 = $1, tagmatch = $tagmatch"
+
+if [ "$tagmatch" == "9" ]; then
+	# We are creating a tag
+	if [ -f "$allowed_users_file" ]; then
+  		rc=$(cat $allowed_users_file | grep -v '^#' | grep -v '^$' |
+    		while read head_pattern user_patterns; do
+      		matchlen=$(expr "refs/tags" : "$head_pattern")
+      		if [ "$matchlen" == "9" ]; then
+        		info "Found matching tag pattern: '$head_pattern'"
+        		for user_pattern in $user_patterns; do
+          		info "Checking user: '$username' against pattern: '$user_pattern'"
+          		matchlen=$(expr "$username" : "$user_pattern")
+          		if [ "$matchlen" == "${#username}" ]; then
+            		grant "Allowing user: '$username' with pattern: '$user_pattern'"
+          		fi
+        		done
+        		deny "The user is not in the access list for refs/tags "
+      		fi
+    		done
+  		)
+  		case "$rc" in
+    		grant) grant >/dev/null "Granting access based on $allowed_users_file" ;;
+    		deny)  deny  >/dev/null "Denying  access based on $allowed_users_file" ;;
+    		*) ;;
+  		esac
+	fi
 fi
 
 deny >/dev/null "There are no more rules to check.  Denying access"

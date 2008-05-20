@@ -24,6 +24,19 @@ function info {
   $verbose && echo >&2 "-Info-          $1"
 }
 
+function yes {
+  $verbose && echo >&2 "-Yes-     $1"
+  echo yes
+  exit 0
+}
+
+function no {
+  $verbose && echo >&2 "-Deny-      $1"
+  echo no
+  exit 1
+}
+
+
 
 REF1=`echo $ARGS | awk '{print $1}'`
 REF2=`echo $ARGS | awk '{print $2}'`
@@ -32,21 +45,35 @@ _PWD=`pwd`
 DEPOT=`basename ${_PWD}`
 
 # Check if commit/push is made to a branch we are interested in.
-if [ ! `echo $REF3 | grep -q info/notify` ]; then
-	# Its turns out we are interested in the commit/push
-	info "Going to notify about commit/push ($REF3)"
-
-	# Build up the mail command
-	ABBREVHASH=`git-log --pretty=format:%h HEAD -1`
-	SUBJECT="commit to ${REF3} in ${DEPOT} - HEAD is now ${ABBREVHASH}"
-
-	if [ ! -z "${BCC}" ]; then
-		info "Adding bcc entries"
-		# Add the bcc's to MAILCMD
-		BCC="-b ${BCC}"
-	fi
-
-	# Complete the MAILCMD with a final recipient
+rc=$(cat info/notify | grep -v '^#' | grep -v '^$' |
+	while read head_pattern; do
+		matchlen=$(expr "$REF3" : "$head_pattern")
+		if [ "$matchlen" == "${#REF3}" ]; then
+			info "Found matching pattern: '$head_pattern'"
+			echo "yes"
+			exit 0;
+		fi
+	done
+)
+case "$rc" in
+	yes)
+		# Its turns out we are interested in the commit/push
+		info "Going to notify about commit/push ($REF3)"
 	
-	git-log --pretty=medium -p ${REF1}..${REF2} | mailx -s "${SUBJECT}" -a "From: ${FROM}" ${BCC} ${TO}
-fi
+		# Build up the mail command
+		ABBREVHASH=`git-log --pretty=format:%h HEAD -1`
+		SUBJECT="commit to ${REF3} in ${DEPOT} - HEAD is now ${ABBREVHASH}"
+	
+		if [ ! -z "${BCC}" ]; then
+			info "Adding bcc entries"
+			# Add the bcc's to MAILCMD
+			BCC="-b ${BCC}"
+		fi
+	
+		# Complete the MAILCMD with a final recipient
+		
+		git-log --pretty=medium -p ${REF1}..${REF2} | mailx -s "${SUBJECT}" -a "From: ${FROM}" ${BCC} ${TO}
+		;;
+	*) 
+		;;
+esac

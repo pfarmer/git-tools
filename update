@@ -59,7 +59,6 @@ esac
 # Implement per-branch controls based on username
 allowed_users_file=$GIT_DIR/info/allowed-users
 username=$(id -u -n)
-info "The user is: '$username'"
 
 if [ -f "$allowed_users_file" ]; then
   rc=$(cat $allowed_users_file | grep -v '^#' | grep -v '^$' |

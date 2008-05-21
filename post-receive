@@ -7,10 +7,15 @@
 
 
 # CONFIG
-FROM="Commits <commits@hbhosting.co.uk>"
-TO="commits@hbhosting.co.uk"
-BCC="pfarmer@gmail.com"
 
+# FROM - The From address for the commit messages
+FROM="Commits"
+
+# Where to send the commit messages
+TO=""
+BCC=""
+
+#
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/git/bin
 
 ARGS=`cat`

@@ -17,7 +17,9 @@ config = ConfigParser.ConfigParser()
 config.read('%s/info/hooks.conf' % REPO_DIR)
 
 hdrfrom = config.get('post-receive', 'from')
+hdrfrom_name = config.get('post-receive', 'from_name')
 hdrto = config.get('post-receive', 'to')
+hdrto_name = config.get('post-receive', 'to_name')
 projname = config.get('post-receive', 'projectname')
 
 INPUT = []
@@ -48,7 +50,7 @@ if os.path.exists("%s/info/notify" % REPO_DIR):
 				logger.debug("Subject: %s" % SUBJECT)
 
 				# Start building the message
-				msg = ("From: %s\r\nTo: %s\r\n" % (hdrfrom, hdrto))
+				msg = ("From: %s <%s>\r\nTo: %s <%s>\r\n" % (hdrfrom_name, hdrfrom, hdrto_name, hdrto))
 				msg = msg + "Subject: %s\r\n\r\n" % SUBJECT
 
 				# Generate the message body

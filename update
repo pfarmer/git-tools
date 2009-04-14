@@ -5,6 +5,7 @@ import logging
 import os
 import re
 import grp
+import ConfigParser
 
 logging.basicConfig(level=logging.INFO)
 
@@ -18,6 +19,9 @@ new_object = argv[2]
 GIT_DIR = os.environ["GIT_DIR"]
 REPO_DIR = os.getcwd()
 USERNAME = os.environ["LOGNAME"]
+
+config = ConfigParser.ConfigParser()
+config.read('%s/info/hooks.conf' % REPO_DIR)
 
 logger.debug("REPO_DIR   = %s" % REPO_DIR)
 logger.debug("USERNAME   = %s" % USERNAME)
@@ -38,6 +42,14 @@ def Deny(message=None):
 	else:
 		logger.error(message)
 		exit(1)
+
+if config.get('update', 'allow_user_branches') == "yes":
+	# User branches allowed, do a quick check
+	user_branch = "refs/heads/%s" % USERNAME
+	if ref_name == user_branch:
+		logger.info("Matched ref: %s against %s (user branch)" % (user_branch, ref_name))
+		Grant("Matched user branch %s" % user_branch)
+		
 
 logger.debug("Checking allowed-users")
 if os.path.exists("%s/info/allowed-users" % REPO_DIR):

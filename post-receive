@@ -1,84 +1,65 @@
-#!/bin/bash
-#
-# An example hook script that is called after a successful
-# commit is made.
-#
-# To enable this hook, make this file executable.
+#!/usr/bin/python
 
+import smtplib
+import fileinput
+import logging
+from subprocess import Popen, PIPE
+import os
+import ConfigParser
+import re
 
-# CONFIG
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("post-receive")
 
-# FROM - The From address for the commit messages
-FROM="Commits"
+REPO_DIR = os.getcwd()
 
-# Where to send the commit messages
-TO=""
-BCC=""
+config = ConfigParser.ConfigParser()
+config.read('%s/info/hooks.conf' % REPO_DIR)
 
-#
-export PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/git/bin
+hdrfrom = config.get('post-receive', 'from')
+hdrto = config.get('post-receive', 'to')
+projname = config.get('post-receive', 'projectname')
 
-ARGS=`cat`
+INPUT = []
+for line in fileinput.input():
+	logger.debug(line.split())
+	INPUT = line.split()
 
-verbose=true
+OLDVALUE = INPUT[0]
+NEWVALUE = INPUT[1]
+REFNAME = INPUT[2]
 
-# Default shell globbing messes things up downstream
-GLOBIGNORE=*
+# Checking that we want to notify about this update
+logger.debug("Checking notify")
+if os.path.exists("%s/info/notify" % REPO_DIR):
+	# Ok - notify file exists, let read it and see what it says
+	for line in open("%s/info/notify" % REPO_DIR):
+		line = line.strip()
+		if re.match("^#.*$", line):
+			pass
+		else:
+			logger.debug("Checking ref: %s against %s" % (line, REFNAME))
+			if re.match("%s" % line, REFNAME):
+				logger.info("Matched ref: %s against %s" % (line, REFNAME))
 
-function info {
-  $verbose && echo >&2 "-Info-          $1"
-}
+				# Generate Subject line
+				abbrevhash = NEWVALUE[:7]
+				SUBJECT = "commit to %s in %s - HEAD is now %s" % (REFNAME, projname, abbrevhash)
+				logger.debug("Subject: %s" % SUBJECT)
 
-function yes {
-  $verbose && echo >&2 "-Yes-     $1"
-  echo yes
-  exit 0
-}
+				# Start building the message
+				msg = ("From: %s\r\nTo: %s\r\n" % (hdrfrom, hdrto))
+				msg = msg + "Subject: %s\r\n\r\n" % SUBJECT
 
-function no {
-  $verbose && echo >&2 "-Deny-      $1"
-  echo no
-  exit 1
-}
-
-
-
-REF1=`echo $ARGS | awk '{print $1}'`
-REF2=`echo $ARGS | awk '{print $2}'`
-REF3=`echo $ARGS | awk '{print $3}'`
-_PWD=`pwd`
-DEPOT=`basename ${_PWD}`
-
-# Check if commit/push is made to a branch we are interested in.
-rc=$(cat info/notify | grep -v '^#' | grep -v '^$' |
-	while read head_pattern; do
-		matchlen=$(expr "$REF3" : "$head_pattern")
-		if [ "$matchlen" == "${#REF3}" ]; then
-			info "Found matching pattern: '$head_pattern'"
-			echo "yes"
-			exit 0;
-		fi
-	done
-)
-case "$rc" in
-	yes)
-		# Its turns out we are interested in the commit/push
-		info "Going to notify about commit/push ($REF3)"
-	
-		# Build up the mail command
-		ABBREVHASH=`git-log --pretty=format:%h HEAD -1`
-		SUBJECT="commit to ${REF3} in ${DEPOT} - HEAD is now ${ABBREVHASH}"
-	
-		if [ ! -z "${BCC}" ]; then
-			info "Adding bcc entries"
-			# Add the bcc's to MAILCMD
-			BCC="-b ${BCC}"
-		fi
-	
-		# Complete the MAILCMD with a final recipient
-		
-		git-log --pretty=medium -p ${REF1}..${REF2} | mailx -s "${SUBJECT}" -a "From: ${FROM}" ${BCC} ${TO}
-		;;
-	*) 
-		;;
-esac
+				# Generate the message body
+				logarg = "%s..%s" % (OLDVALUE, NEWVALUE)
+				log = Popen(['git', 'log', '--pretty=medium', '-p', logarg], stdout=PIPE).communicate()[0]
+				msg = msg + log
+			
+				# Send the message
+				server = smtplib.SMTP('localhost')
+				server.sendmail(hdrfrom, hdrto, msg)
+				server.quit()
+				exit()
+else:
+	logger.error("info/notify doesn't exist, not going to send any commit messages")

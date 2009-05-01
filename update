@@ -1,5 +1,51 @@
 #!/usr/bin/python
 
+#
+# Copyright (C) 2009 Peter Farmer
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2, as
+# published by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License version 2 for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+#
+
+#
+# From: http://book.git-scm.com/5_git_hooks.html
+#
+# This hook is invoked by 'git-receive-pack' on the remote repository, 
+# which happens when a 'git-push' is done on a local repository. Just
+# before updating the ref on the remote repository, the update hook is
+# invoked. Its exit status determines the success or failure of the
+# ref update.
+#
+
+#
+# This hook checks that the user who is attempting to commit to the
+# repository is allowed to do so. It does this based on the information
+# in info/allowed-users, this file should look like this:
+#
+# refs/heads      pfarmer
+# refs/heads/master jbloggs
+# refs/heads/v1.0-bugfixes jbloggs
+# refs/tags       pfarmer
+#
+# It expects 1 ref and one username per line, it will match the shortest
+# matching ref, so refs/heads will match refs/heads/master.
+#
+# It will also (if configured to do so) allow users to push to
+# refs/heads/USERNAME.
+#
+# See hooks.conf.
+#
+
 import sys
 import logging
 import os

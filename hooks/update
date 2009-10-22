@@ -114,7 +114,7 @@ if os.path.exists("%s/info/allowed-users" % REPO_DIR):
 				logger.info("Matched ref: %s against %s" % (parts[0], ref_name))
 				# now check the username
 				logger.debug("Checking user: %s against %s" % (parts[1], USERNAME))
-				if re.match("^%s$" % parts[1], USERNAME):
+				if parts[1] == USERNAME:
 					Grant("Matched username: %s against %s" % (parts[1], USERNAME))
 
 logger.debug("Checking allowed groups")

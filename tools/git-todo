@@ -1,6 +1,7 @@
 #!/bin/bash
 
 DEBUG=1
+QUIET=""
 
 function debug {
     if [ $DEBUG == 1 ]; then
@@ -13,16 +14,32 @@ function usage {
     exit
 }
 
+function set_action {
+    if [ $ACTION != 0 ]; then
+        debug "Errm ACTION is already set to ${ACTION}"
+        echo "Only one function is possible at a time"
+        usage
+    else
+        ACTION=$1
+    fi
+}
+
+
 git rev-parse 2> /dev/null
 if [ $? -gt 0 ]; then
     echo "Not in a git repo!"
     exit 128
 fi
 
+CWD=`pwd`
+BASEDIR=`git basedir`
+
+cd ${BASEDIR}
+
 git dirtybranch
 if [ $? == 1 ]; then
     debug "Current branch is dirty, stashing commits"
-    git stash --quiet
+    git stash ${QUIET}
 fi
 
 ACTION=0
@@ -31,31 +48,21 @@ while test $# != 0
 do
     case $1 in
     add)
-        if [ $ACTION != 0 ]; then
-            debug "Errm ACTION is already set to ${ACTION}"
-            echo "Only one function is possible at a time"
-            usage
-        else
-            shift; ADD_MESSAGE=$1
-            ACTION=ADD
-        fi
+        set_action ADD
         ;;
 
-    delete)
-        if [ $ACTION != 0 ]; then 
-            debug "Errm ACTION is already set to ${ACTION}"
-            echo "Only one function is possible at a time"
-            usage
-        else
-            ACTION=DELETE
-        fi
+    list)
+        set_action LIST
+        ;;
     esac
     shift
 done
 
+debug "ACTION = $ACTION"
+
 if [ $ACTION == 0 ]; then
     echo "I have nothing to do!"
-    git stash pop --quiet
+    git stash pop ${QUIET}
     exit 1
 fi
 
@@ -63,12 +70,40 @@ CURRENT_BRANCH=`git whichbranch`
 
 if [ "`git findabranch todo`" == "todo" ]; then
     debug "We have a branch todo"
-    git checkout -q todo
+    git checkout ${QUIET} todo
 else
     debug "There is no branch todo, lets create one"
     git emptybranch todo
 fi
 
+if [ $ACTION == "ADD" ]; then
+    read -p "Please enter your new TODO: " TODO
+    if [ -z "$TODO" ]; then
+        debug "TODO is zero length!"
+        git checkout ${QUIET} ${CURRENT_BRANCH}
+        git stash pop ${QUIET}
+        echo "TODO was empty!"
+        exit
+    fi
+    debug "TODO is $TODO"
+    echo "$TODO" >> todo
+    echo "All done!"
+fi
+
+if [ $ACTION == "LIST" ]; then
+    for line in `cat todo`; do
+        echo "* $line"
+    done
+fi
+
+# commit to todo
+git add -A ${QUIET}
+git commit -m"todo checkin" ${QUIET}
+
+
 # Restore to previous point
-git checkout -q ${CURRENT_BRANCH}
-git stash pop --quiet
+git checkout ${CURRENT_BRANCH}
+git stash pop
+#git clean -fdx
+
+cd ${CWD}

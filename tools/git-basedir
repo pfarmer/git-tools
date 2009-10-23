@@ -1,0 +1,23 @@
+#!/bin/bash
+
+git rev-parse 2> /dev/null
+if [ $? -gt 0 ]; then
+    echo "Not in a git repo!"
+    exit 128
+fi
+
+CWD=`pwd`
+
+FOUND=0
+
+while [ $FOUND != 1 ]; do
+    if [ -d .git ]; then
+        BASEDIR=`pwd`
+        FOUND=1
+    else
+        cd ..
+    fi
+done
+
+cd ${CWD}
+echo $BASEDIR

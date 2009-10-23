@@ -1,0 +1,74 @@
+#!/bin/bash
+
+DEBUG=1
+
+function debug {
+    if [ $DEBUG == 1 ]; then
+        echo "DEBUG: $1"
+    fi
+}
+
+function usage {
+    echo "Usage: "
+    exit
+}
+
+git rev-parse 2> /dev/null
+if [ $? -gt 0 ]; then
+    echo "Not in a git repo!"
+    exit 128
+fi
+
+git dirtybranch
+if [ $? == 1 ]; then
+    debug "Current branch is dirty, stashing commits"
+    git stash --quiet
+fi
+
+ACTION=0
+
+while test $# != 0
+do
+    case $1 in
+    add)
+        if [ $ACTION != 0 ]; then
+            debug "Errm ACTION is already set to ${ACTION}"
+            echo "Only one function is possible at a time"
+            usage
+        else
+            shift; ADD_MESSAGE=$1
+            ACTION=ADD
+        fi
+        ;;
+
+    delete)
+        if [ $ACTION != 0 ]; then 
+            debug "Errm ACTION is already set to ${ACTION}"
+            echo "Only one function is possible at a time"
+            usage
+        else
+            ACTION=DELETE
+        fi
+    esac
+    shift
+done
+
+if [ $ACTION == 0 ]; then
+    echo "I have nothing to do!"
+    git stash pop --quiet
+    exit 1
+fi
+
+CURRENT_BRANCH=`git whichbranch`
+
+if [ "`git findabranch todo`" == "todo" ]; then
+    debug "We have a branch todo"
+    git checkout -q todo
+else
+    debug "There is no branch todo, lets create one"
+    git emptybranch todo
+fi
+
+# Restore to previous point
+git checkout -q ${CURRENT_BRANCH}
+git stash pop --quiet

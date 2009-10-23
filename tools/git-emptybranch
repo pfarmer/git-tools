@@ -25,10 +25,10 @@ fi
 git rev-parse 2> /dev/null
 if [ $? -gt 0 ]; then
     echo "Not in a git repo!"
-    exit
+    exit 128
 fi
 
 git symbolic-ref HEAD refs/heads/$1
 rm .git/index
-git clean -fdx
+git clean -fdx --quiet
 git commit --allow-empty -m "Start $1 branch"

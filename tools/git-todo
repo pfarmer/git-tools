@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DEBUG=1
-QUIET=""
+QUIET="--quiet"
 
 function debug {
     if [ $DEBUG == 1 ]; then
@@ -91,14 +91,20 @@ if [ $ACTION == "ADD" ]; then
 fi
 
 if [ $ACTION == "LIST" ]; then
+    _IFS=${IFS}
+    IFS=$'\n'
     for line in `cat todo`; do
         echo "* $line"
     done
+    IFS=${_IFS}
 fi
 
-# commit to todo
-git add -A ${QUIET}
-git commit -m"todo checkin" ${QUIET}
+git dirtybranch
+if [ $? == 1 ]; then
+    # commit to todo
+    git add -A
+    git commit -m"todo checkin" ${QUIET}
+fi
 
 
 # Restore to previous point
